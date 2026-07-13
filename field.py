@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 
 
 
+# test
 
 def set_card_imgs(w, h):
     global card_imgs
