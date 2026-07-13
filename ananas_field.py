@@ -3,7 +3,7 @@ from tkinter import ttk
 from tkinter import *
 from PIL import Image, ImageTk
 from collections import Counter
-from aux import show_cards, straights, get_samples
+from aux_utils import show_cards, straights, get_samples
 import random
 from itertools import combinations, product
 from copy import deepcopy
