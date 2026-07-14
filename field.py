@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 
 # test
 def init_data(root_g):
-    global w, h, canvas, root, cards, rb_value, screen_width, screen_height
+    global w, h, canvas, root, rb_value, screen_width, screen_height
     root = root_g
     root.title("Ananas")
     root.attributes("-fullscreen", True)
@@ -18,9 +18,7 @@ def init_data(root_g):
     rb_value.set(0)
     h = int(screen_height / 12)
     w = int(h / 1.4)
-    cards = []
-
-
+ 
 
 def set_card_imgs():
     global card_imgs
@@ -42,17 +40,37 @@ class Card:
         self.y = self.n % 4 * h + h // 2 + 10
         self.state = 'free'
         self.id = canvas.create_image(self.x, self.y, image = card_imgs[n], anchor='center')
-        #canvas.tag_bind(self.id, "<Button-1>", self.select)
+        canvas.tag_bind(self.id, "<Button-1>", self.select)
+    def select(self, event):
+        if self.state == 'free':
+            if rb_value.get() < 9:
+                player = players[rb_value.get() // 3]
+                row = rb_value.get() % 3
+                if player.free_cells[row]: 
+                    player.append_card(self, row)
+                    self.state = 'placed'
+                    return
+        if self.state == 'placed':
+            for player in players:
+                for i in range(3):
+                    if self.n in player.rows[i]:
+                        player.remove_card(self, i)
+                        return
+    def reset(self):
+        self.state = 'free'
+        canvas.coords(self.id, (self.x, self.y))
 
 class Field:
     def __init__(self):
-        global canvas
+        global canvas, players, cards
         frame = ttk.Frame(root)
         frame.pack(fill='both', expand=True)
         canvas = tk.Canvas(frame, bg='lightgreen', bd=0)
         canvas.pack(fill='both', expand=True)
         set_card_imgs()
+        cards = []
         for i in range(52): cards.append(Card(i))
+        players = [Player(0), Player(1), Player(2)]
 
 class Player:
     def __init__(self, n):
@@ -73,14 +91,15 @@ class Player:
     def reset(self):
         self.rows = [[], [], []]
         self.free_cells = [3, 5, 5]
-    def append_card(self, card, row):
+    def append_card(self, card: Card, row):
         shift = 0.5 if row == 0 else -0.5
         self.rows[row].append(card.n)
-        self.canvas.coords(card.id, (self.x+self.w*(len(self.rows[row])+shift),self.y+h*(row+0.5)))
+        canvas.coords(card.id, (self.x+w*(len(self.rows[row])+shift),self.y+h*(row+0.5)))
         self.free_cells[row] -= 1
-    def remove_card(self, card, row):
+    def remove_card(self, card: Card, row):
         self.rows[row].remove(card.n)
         self.free_cells[row] += 1
+        card.reset()
         self.sort_cards(row)
     def sort_cards(self, row):
         shift = 1.5 if row == 0 else 0.5

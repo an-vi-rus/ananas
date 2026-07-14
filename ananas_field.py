@@ -472,9 +472,12 @@ class Card:
         self.x = root.winfo_width()/2 - (6-self.n // 4) * card_w + 10
         self.y = self.n % 4 * card_h + card_h // 2 + 10
         self.state = 'free'
-        self.place = 0
         self.id = canvas.create_image(self.x, self.y, image = card_imgs[n], anchor='center')
         canvas.tag_bind(self.id, "<Button-1>", self.select)
+    def reset(self):
+        canvas.coords(self.id, (self.x, self.y))
+        self.state = 'free'
+    
     def select(self, event):
         if self.state == 'free':
             if rb_value.get() < 9:
@@ -502,7 +505,7 @@ class Card:
             if p.n < 2:
                 p.remove_card(self, self.place[1])
                 self.state = 'free'
-                hand.insert_card(self.n)
+                hand_.insert_card(self.n)
             else:
                 if rb_value.get() == 9:
                     p.remove_card(self, self.place[1])
@@ -511,7 +514,7 @@ class Card:
                 else:
                     p.remove_card(self, self.place[1])
                     self.state = 'free'
-                    hand.insert_card(self.n)
+                    hand_.insert_card(self.n)
             return
         if self.state == 'selected':
             if rb_value.get() == 9:
