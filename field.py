@@ -2,10 +2,13 @@ import sys
 import tkinter as tk
 from tkinter import ttk, IntVar, Radiobutton, Button
 from PIL import Image, ImageTk
+from hand import *
+import utils
 
-def init_data(root_g):
-    global w, h, canvas, root, rb_value, screen_width, screen_height, field
-    root = root_g
+hand = None
+def init_data():
+    global w, h, canvas, root, rb_value, screen_width, screen_height, field, hand
+    root = tk.Tk()
     root.title("Ananas")
     if sys.platform == "darwin": root.attributes("-fullscreen", True)
     else: root.state("zoomed")
@@ -18,6 +21,8 @@ def init_data(root_g):
     h = int(screen_height / 12)
     w = int(h / 1.4)
     field = Field()
+    hand = Hand()
+    root.mainloop()
 def set_card_imgs():
     global card_imgs
     card_imgs = []
@@ -33,6 +38,12 @@ def set_card_imgs():
 def key_pressed(event):
     match event.keysym:
         case 'f': rb_value.set(9)
+        case 'Escape':
+            print('"Esc passed"')
+        case 'c':
+            match hand.rows[0].cells + hand.rows[1].cells + hand.rows[2].cells:
+                case 2: s4p(players[2], fantasy, hand)
+        case 'n': fantasy.Next(5, 2000)
 class Card:
     def __init__(self, n):
         self.n = n
@@ -47,27 +58,26 @@ class Card:
                 player = players[rb_value.get() // 3]
                 row = rb_value.get() % 3
                 if player.cells[row]: 
-                    player.append_card(self, row)
+                    player.append_card(self.n, row)
                 return
             else:
-                fantasy.append_card(self)
+                fantasy.append_card(self.n)
+                hand.cards.remove(self.n)
                 return
         if self.state == 'placed':
             for player in players:
                 for i in range(3):
                     if self.n in player.rows[i]:
-                        player.remove_card(self, i)
+                        player.remove_card(self.n, i)
                         return
         if self.state == 'selected':
             if rb_value.get() // 3 == 2:
                 if players[2].cells[rb_value.get() % 3]:
-                    players[2].append_card(self, rb_value.get() % 3)
+                    players[2].append_card(self.n, rb_value.get() % 3)
                     fantasy.remove_card(self.n)
             else:
                 fantasy.remove_card(self.n)
-                self.reset()
-
-                    
+                self.reset()                  
     def reset(self):
         self.state = 'free'
         canvas.coords(self.id, (self.x, self.y))
@@ -110,16 +120,20 @@ class Player:
     def reset(self):
         self.rows = [[], [], []]
         self.cells = [3, 5, 5]
-    def append_card(self, card: Card, row):
+    def append_card(self, card, row):
         shift = 0.5 if row == 0 else -0.5
-        self.rows[row].append(card.n)
-        canvas.coords(card.id, (self.x+w*(len(self.rows[row])+shift),self.y+h*(row+0.5)))
+        self.rows[row].append(card)
+        canvas.coords(cards[card].id, (self.x+w*(len(self.rows[row])+shift),self.y+h*(row+0.5)))
         self.cells[row] -= 1
-        card.state = 'placed'
-    def remove_card(self, card: Card, row):
-        self.rows[row].remove(card.n)
+        cards[card].state = 'placed'
+        if card in hand.cards: hand.cards.remove(card)
+        if self.n == 2:
+            hand.rows[row].cells -=1 
+            hand.rows[row].add_card(hand.rows[row], card)
+    def remove_card(self, card, row):
+        self.rows[row].remove(card)
         self.cells[row] += 1
-        card.reset()
+        cards[card].reset()
         self.sort_cards(row)
     def sort_cards(self, row):
         shift = 1.5 if row == 0 else 0.5
@@ -129,7 +143,7 @@ class Fantasy:
     def __init__(self):
         self.point = (screen_width // 2 - 7 * w, screen_height - 5 * h)
         self.radiobutton = Radiobutton(text = 'Fantasy', variable=rb_value, value=9, bg='lightgreen', font=('TkDefaultFont, 11'))
-        self.next_button = Button(text = 'Next', bg='lightgreen', command=self.next, font=('TkDefaultFont, 11'))
+        self.next_button = Button(text = 'Next', bg='lightgreen', command=self.Next, font=('TkDefaultFont, 11'))
         canvas.create_window(self.point[0] - 2 * w, self.point[1] + h, window=self.radiobutton, anchor='sw')
         canvas.create_window(self.point[0] - 1.5 * w, self.point[1], window=self.next_button, anchor='nw')
         self.reset()
@@ -138,21 +152,54 @@ class Fantasy:
         self.dropped = []
         self.step = 0
         rb_value.set(9)
-    def append_card(self, card: Card):
-        canvas.coords(card.id, (self.point[0]+w*(len(self.cards)+0.5),self.point[1]+h*0.5))
-        self.cards.append(card.n)
-        card.state = 'selected'     
+    def append_card(self, card: int):
+        canvas.coords(cards[card].id, (self.point[0]+w*(len(self.cards)+0.5),self.point[1]+h*0.5))
+        self.cards.append(card)
+        cards[card].state = 'selected'     
     def sort_cards(self):
         for i in range(len(self.cards)):
             canvas.coords(cards[self.cards[i]].id, (self.point[0]+w*(i+0.5)),self.point[1]+h*0.5)
-    def drop_card(self, card: Card):
-        card.state = 'dropped'
-        self.cards.remove(card.n)
-        self.dropped.append(card.n)
-        canvas.coords(card.id, (self.point[0]+w*((len(self.dropped)+12)),self.point[1]+h*0.5))
+    def drop_card(self, card: int):
+        cards[card].state = 'dropped'
+        self.cards.remove(card)
+        self.dropped.append(card)
+        canvas.coords(cards[card].id, (self.point[0]+w*((len(self.dropped)+12)),self.point[1]+h*0.5))
         self.sort_cards()
-    def remove_card(self, card: Card):
+    def drop_cards(self):
+        while self.cards:
+            n = cards[self.cards.pop()]
+            cards[n].state = 'dropped'
+            self.dropped.append(n)
+            canvas.coords(cards[n].id, (self.point[0]+w*((len(self.dropped)+12)),self.point[1]+h*0.5))
+
+    def remove_card(self, card: int):
         self.cards.remove(card)
         self.sort_cards()
-    def next(self):
+    def Next(self, starter, seed):
+        deck = utils.test_deck(starter, seed)
+        match self.step:
+            case 0:
+                for i in range(5):
+                    card = cards[deck[i]]
+                    fantasy.append_card(card.n)
+                self.step += 1
+            case 1:
+                for p in range(2):
+                    for c in range(5):
+                        index = p*5+5+c
+                        card = cards[deck[index]]
+                        players[p].append_card(card.n, 1)
+                for i in range(3):
+                    card = cards[deck[15+i]]
+                    fantasy.append_card(card.n)
+                    hand.cards.remove(card.n)
+            case 2:
+                pass
+            case 3:
+                pass
+            case 4:
+                pass
+            case 5:
+                pass
+
         pass
