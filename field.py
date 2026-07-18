@@ -2,7 +2,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk, IntVar, Radiobutton, Button
 from PIL import Image, ImageTk
-from hand import *
+import hand
 import utils
 
 hand = None
@@ -21,8 +21,13 @@ def init_data():
     h = int(screen_height / 12)
     w = int(h / 1.4)
     field = Field()
-    hand = Hand()
+    hand = hand.hand
     root.mainloop()
+def reset():
+    for player in players: player.reset()
+    for card in cards: card.reset()
+    fantasy.reset()
+    hand.reset()
 def set_card_imgs():
     global card_imgs
     card_imgs = []
@@ -36,14 +41,18 @@ def set_card_imgs():
                 img = ImageTk.PhotoImage(f.resize((w - 2, h - 2), 2))
                 card_imgs.append(img)
 def key_pressed(event):
+    global deck
     match event.keysym:
         case 'f': rb_value.set(9)
-        case 'Escape':
-            print('"Esc passed"')
+        case 'Escape': reset()
+        case 'd': deck = fantasy.deck
+        case 'D': fantasy.deck = deck
         case 'c':
             match hand.rows[0].cells + hand.rows[1].cells + hand.rows[2].cells:
-                case 2: s4p(players[2], fantasy, hand)
+                case 2: hand.s4p(players[2], fantasy, hand)
         case 'n': fantasy.Next(5, 2000)
+        case p:
+            print('pause')
 class Card:
     def __init__(self, n):
         self.n = n
@@ -92,7 +101,7 @@ class Field:
         cards = []
         for i in range(52): cards.append(Card(i))
         players = [Player(0), Player(1), Player(2)]
-        fantasy = Fantasy()
+        fantasy = Fantasy(5, 2000)
 class Player:
     def __init__(self, n):
         self.n = n
@@ -140,7 +149,9 @@ class Player:
         for i in range(len(self.rows[row])):
             canvas.coords(cards[self.rows[row][i]].id, (self.x+w*(i+shift)),self.y+h*(row+0.5))
 class Fantasy:
-    def __init__(self):
+    def __init__(self, starter, seed):
+        self.starter = starter
+        self.seed = seed
         self.point = (screen_width // 2 - 7 * w, screen_height - 5 * h)
         self.radiobutton = Radiobutton(text = 'Fantasy', variable=rb_value, value=9, bg='lightgreen', font=('TkDefaultFont, 11'))
         self.next_button = Button(text = 'Next', bg='lightgreen', command=self.Next, font=('TkDefaultFont, 11'))
@@ -152,6 +163,7 @@ class Fantasy:
         self.dropped = []
         self.step = 0
         rb_value.set(9)
+        self.deck = utils.test_deck(self.starter, self.seed)
     def append_card(self, card: int):
         canvas.coords(cards[card].id, (self.point[0]+w*(len(self.cards)+0.5),self.point[1]+h*0.5))
         self.cards.append(card)
@@ -167,7 +179,7 @@ class Fantasy:
         self.sort_cards()
     def drop_cards(self):
         while self.cards:
-            n = cards[self.cards.pop()]
+            n = self.cards.pop()
             cards[n].state = 'dropped'
             self.dropped.append(n)
             canvas.coords(cards[n].id, (self.point[0]+w*((len(self.dropped)+12)),self.point[1]+h*0.5))
@@ -176,30 +188,46 @@ class Fantasy:
         self.cards.remove(card)
         self.sort_cards()
     def Next(self, starter, seed):
-        deck = utils.test_deck(starter, seed)
         match self.step:
             case 0:
                 for i in range(5):
-                    card = cards[deck[i]]
-                    fantasy.append_card(card.n)
+                    fantasy.append_card(self.deck[i])
                 self.step += 1
             case 1:
                 for p in range(2):
                     for c in range(5):
-                        index = p*5+5+c
-                        card = cards[deck[index]]
-                        players[p].append_card(card.n, 1)
+                        players[p].append_card(self.deck[p*5+5+c], 1)
                 for i in range(3):
-                    card = cards[deck[15+i]]
-                    fantasy.append_card(card.n)
-                    hand.cards.remove(card.n)
+                    fantasy.append_card(self.deck[15+i])
+                self.step += 1
             case 2:
-                pass
+                self.drop_cards()
+                for p in range(2):
+                    for c in range(2):
+                        players[p].append_card(self.deck[p*2+c+18], 2)
+                for i in range(3):
+                    fantasy.append_card(self.deck[i+22])
+                self.step += 1
             case 3:
-                pass
+                self.drop_cards()
+                for p in range(2):
+                    for c in range(2):
+                        players[p].append_card(self.deck[p*2+c+25], 2)
+                for i in range(3):
+                    fantasy.append_card(self.deck[i+29])
+                self.step += 1
             case 4:
-                pass
+                self.drop_cards()
+                for p in range(2):
+                    for c in range(2):
+                        players[p].append_card(self.deck[p*2+c+32], 0)
+                for i in range(3):
+                    fantasy.append_card(self.deck[i+36])
+                self.step += 1
             case 5:
-                pass
-
-        pass
+                self.drop_cards()
+                players[0].append_card(self.deck[39], 0)
+                players[0].append_card(self.deck[40], 2)
+                players[1].append_card(self.deck[41], 0)
+                players[1].append_card(self.deck[42], 2)
+                self.step +=1

@@ -10,4 +10,4 @@ def test_deck(n, seed):
     random.shuffle(tmp)
     deck[n-52:] = tmp
     return deck
-test_deck(5, 2000)
+

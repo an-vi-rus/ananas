@@ -1,42 +1,8 @@
 from itertools import combinations
 
-
+penalty = -6
 premium = 6
 
-class Row:
-    def __init__(self, row: int):
-        self.row = row
-        self.reset()
-    def reset(self):
-        self.cells = 3 if self.row == 0 else 5
-        self.combo, self.max_combo = 0, 0
-        self.flush = -1
-        self.points = 0
-        self.add_card = add_card_fs if self.row else add_card3
-class Hand:
-    def __init__(self):
-        self.rows = [Row(0), Row(1), Row(2)]
-        self.reset()
-    def reset(self):
-        for row in self.rows: row.reset()
-        self.cards = list(range(52))
-        self.indexes3 = [
-                        ((0,0),(1,0)), ((0,0),(2,0)), ((1,0),(2,0)), ((0,1),(1,1)), ((0,1),(2,1)), ((1,1),(2,1)),
-                        ((0,2),(1,2)), ((0,2),(2,2)), ((1,2),(2,2)), 
-                        ((0,0),(1,1)), ((0,0),(2,1)), ((1,0),(2,1)), ((1,0),(0,1)), ((2,0),(0,1)), ((2,0),(1,1)), 
-                        ((0,0),(1,2)), ((0,0),(2,2)), ((1,0),(2,2)), ((1,0),(0,2)), ((2,0),(0,2)), ((2,0),(1,2)), 
-                        ((0,1),(1,2)), ((0,1),(2,2)), ((1,1),(2,2)), ((1,1),(0,2)), ((2,1),(0,2)), ((2,1),(1,2))
-                        ]
-        self.indexes2 = [(0,0), (1,0), (0,1), (1,1), (0,2), (1,2)]
-    def remove_index3_2(self, row):
-        for i in reversed(range(len(self.indexes3))):
-            if self.indexes3[i][0][1] == row and self.indexes3[i][1][1] == row: del self.indexes3[i]
-    def remove_index3_1(self, row):
-        for i in reversed(range(len(self.indexes3))):
-            if self.indexes3[i][0][1] == row or  self.indexes3[i][1][1] == row: del self.indexes3[i]
-    def remove_index2(self, row):
-        for i in reversed(range(len(self.indexes2))):
-            if self.indexes2[i][1] == row: del self.indexes2[i]
 
 def is_straight(combo: tuple):
     if combo[0] - combo[-1] <= 4: return min(combo[-1] + 4, 12)
@@ -319,6 +285,29 @@ def final_pair3(row: Row, pair: list):
     return (0, sorted([rank0, rank1, row.combo[1][0]], reverse=True))
 def final_pair5(row: Row, pair: list):
     pass
+def final_fs1(row: Row, card: int):
+    suit = card % 4
+    combo = rank5(row, card)
+    s = is_straight(combo[1])
+    if s > 0 and row.flush == suit:
+        if s < 12: return 30 if hand.rows[2].max_combo >= (8, [s]) else penalty
+        return 50 if hand.rows[2].max_combo == (9, [12]) else penalty
+    if row.flush == suit: return 8 if hand.rows[2].max_combo >= (5, combo[1]) else penalty
+    if s > 0:
+        return 4 if hand.rows[2].max_combo >= (4, [s]) else penalty
+    return 0 if hand.rows[2].combo >= combo else penalty
+def final_fs2(row: Row, card: int):
+    suit = card % 4
+    combo = rank5(row, card)
+    s = is_straight(combo[1])
+    if s > 0 and row.flush == suit:
+        if s < 12: return 15
+        return 25
+    if row.flush == suit: return 4
+    if s > 0:
+        return 2
+    return 0
+
 
 def s4p(player, f, h: Hand) -> tuple:
     p = 0
@@ -361,4 +350,38 @@ def s4p(player, f, h: Hand) -> tuple:
         pass
 
 
-
+class Row:
+    def __init__(self, row: int):
+        self.row = row
+        self.reset()
+    def reset(self):
+        self.cells = 3 if self.row == 0 else 5
+        self.combo, self.max_combo = 0, 0
+        self.flush = -1
+        self.points = 0
+        self.add_card = add_card_fs if self.row else add_card3
+class Hand:
+    def __init__(self):
+        self.rows = [Row(0), Row(1), Row(2)]
+        self.reset()
+    def reset(self):
+        for row in self.rows: row.reset()
+        self.cards = list(range(52))
+        self.indexes3 = [
+                        ((0,0),(1,0)), ((0,0),(2,0)), ((1,0),(2,0)), ((0,1),(1,1)), ((0,1),(2,1)), ((1,1),(2,1)),
+                        ((0,2),(1,2)), ((0,2),(2,2)), ((1,2),(2,2)), 
+                        ((0,0),(1,1)), ((0,0),(2,1)), ((1,0),(2,1)), ((1,0),(0,1)), ((2,0),(0,1)), ((2,0),(1,1)), 
+                        ((0,0),(1,2)), ((0,0),(2,2)), ((1,0),(2,2)), ((1,0),(0,2)), ((2,0),(0,2)), ((2,0),(1,2)), 
+                        ((0,1),(1,2)), ((0,1),(2,2)), ((1,1),(2,2)), ((1,1),(0,2)), ((2,1),(0,2)), ((2,1),(1,2))
+                        ]
+        self.indexes2 = [(0,0), (1,0), (0,1), (1,1), (0,2), (1,2)]
+    def remove_index3_2(self, row):
+        for i in reversed(range(len(self.indexes3))):
+            if self.indexes3[i][0][1] == row and self.indexes3[i][1][1] == row: del self.indexes3[i]
+    def remove_index3_1(self, row):
+        for i in reversed(range(len(self.indexes3))):
+            if self.indexes3[i][0][1] == row or  self.indexes3[i][1][1] == row: del self.indexes3[i]
+    def remove_index2(self, row):
+        for i in reversed(range(len(self.indexes2))):
+            if self.indexes2[i][1] == row: del self.indexes2[i]
+hand = Hand()
