@@ -415,7 +415,7 @@ def s4p(player, f, h: Hand) -> tuple:
         for pair in pairs:
             points = final_22(pair)
             if points > max_points:
-                max_points = points
+                max_points = points_
                 p = ((2, pair[0]), (2, pair[1]))
         print(p)
         return p

@@ -2,7 +2,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk, IntVar, Radiobutton, Button
 from PIL import Image, ImageTk
-import hand
+import my_hand  
 import utils
 
 hand = None
@@ -21,7 +21,7 @@ def init_data():
     h = int(screen_height / 12)
     w = int(h / 1.4)
     field = Field()
-    hand = hand.hand
+    hand = my_hand.hand
     root.mainloop()
 def reset():
     for player in players: player.reset()
@@ -49,8 +49,11 @@ def key_pressed(event):
         case 'D': fantasy.deck = deck
         case 'c':
             match hand.rows[0].cells + hand.rows[1].cells + hand.rows[2].cells:
-                case 2: hand.s4p(players[2], fantasy, hand)
-        case 'n': fantasy.Next(5, 2000)
+                case 2: 
+                    p = my_hand.s4p(fantasy, hand)
+                    if p:
+                        for pair in p: players[2].append_card(pair[0], pair[1])
+        case 'n': fantasy.Next()
         case p:
             print('pause')
 class Card:
@@ -187,7 +190,7 @@ class Fantasy:
     def remove_card(self, card: int):
         self.cards.remove(card)
         self.sort_cards()
-    def Next(self, starter, seed):
+    def Next(self):
         match self.step:
             case 0:
                 for i in range(5):

@@ -3,11 +3,32 @@ from itertools import combinations
 penalty = -6
 premium = 6
 
-
 def is_straight(combo: list):
     if combo[0] - combo[-1] <= 4: return min(combo[-1] + 4, 12)
     if combo[0] == 12 and combo[1] <= 3: return 3
     return 0
+def get_points(combo: tuple, row: int):
+    if not row:
+        if not combo[0]: return 0
+        if combo[0] == 1:
+            if combo[1][0] < 4: return 0
+            if combo[1][0] < 10: return combo[1][0] - 3
+            return combo[1][0] - 3 + premium
+        return combo[1][0] + 10 + premium
+    if row == 1:
+        if combo[0] < 3: return 0
+        if combo[0] == 3: return 2
+        if combo[0] == 4: return 4
+        if combo[0] == 5: return 8
+        if combo[0] == 6: return 12
+        if combo[0] == 7: return 20
+        if combo[0] == 8: return 30 if combo[1][0] < 12 else 50
+    if combo[0] == 5: return 4
+    if combo[0] == 6: return 6
+    if combo[0] < 4: return 0
+    if combo[0] == 4: return 2
+    if combo[0] == 7: return 10
+    if combo[0] == 8: return 15 if combo[1][0] < 12 else 25
 def rank5(row: Row, card):
     rank = card // 4
     match row.cells:
@@ -43,7 +64,7 @@ def rank5(row: Row, card):
                         r.remove(rank)
                         return (1, [rank] + r)
                     return (0, sorted(row.combo[1] + [rank], reverse=True))
-                case 3: return (7, row.combo[1]) if row.combo[1][0] == rank else (3, row.combo[1][0] + [rank])
+                case 3: return (7, row.combo[1]) if row.combo[1][0] == rank else (3, row.combo[1] + [rank])
         case 2:
             if row.combo[0]: return (3, [rank]) if rank == row.combo[1][0] else (1, row.combo[1] + [rank])
             if rank == row.combo[1][0]: return (1, row.combo[1])
@@ -307,7 +328,25 @@ def final_fs2(row: Row, card: int):
     if s > 0:
         return 2
     return 0
-
+def c2_3(combo: tuple, rank: int) -> tuple:
+    match combo[0]:
+        case 0:
+            if rank == combo[1][0]: return (1, combo[1])
+            if rank == combo[1][1]: return (1, [rank, combo[1][0]])
+            return (0, sorted(combo[1] + [rank], reverse=True))    
+        case 1:
+            if rank == combo[1][0]: return (3, combo[1]) 
+            return (1, combo[1] + [rank])
+def c1_3(combo: tuple, pair: list) -> tuple:
+    if pair[0] == pair[1]:
+        if pair[0] == combo[1][0]: return (3, combo[1])
+        else: return (1, [pair[0], combo[1][0]])
+    if pair[0] == combo[1][0]: return (1, [pair[0], pair[1]])
+    if pair[1] == combo[1][0]: return (1, [pair[1], pair[0]])
+    return (0, sorted([pair[0], pair[1], combo[1][0]], reverse=True))
+def c1_2(combo: tuple, rank: int) -> tuple:
+    if combo[1][0] == rank: return(1, combo[1])
+    return (0, [combo[1][0], rank]) if combo[1][0] > rank else (0, [rank, combo[1][0]])
 def c3_4(combo: tuple, rank: int) -> tuple:
     #rank = card // 4
     match combo[0]:
@@ -383,50 +422,141 @@ def final_22(pair: list):
             s = is_straight(combo[1])
             if s: return 2 if (4, [s]) >= hand.rows[1].combo else penalty
         return 0 if combo >= hand.rows[1].combo else penalty
-        
-        
-    
+def final_11(pair: list):
+    rank0, rank1 = pair[0] // 4, pair[1] // 4
+    combo = c4_5(c3_4(hand.rows[1].combo, rank0), rank1)
+    if hand.rows[1].add_card is add_card5:
+        if hand.rows[2].combo >= combo and combo >= hand.rows[0].combo:
+            if combo[0] < 3: return 0
+            if combo[0] == 3: return 2
+            if combo[0] == 6: return 12
+            if combo[0] == 7: return 20
+        return penalty
+    if hand.rows[1].add_card is add_card_f:
+        if pair[0] % 4 == hand.rows[1].flush and pair[1] % 4 == hand.rows[1].flush:
+            return 8 if (5, combo[1]) <= hand.rows[2].combo else penalty
+        return 0 if combo <= hand.rows[2].combo and combo >= hand.rows[0].combo else penalty
+    if hand.rows[1].add_card is add_card_s:
+        if combo[0] == 0:
+            s = is_straight(combo[1])
+            if s: return 4 if (4, [s]) <= hand.rows[2].combo else penalty
+        return 0 if combo <= hand.rows[2].combo and combo >= hand.rows[0].combo else penalty
+    if hand.rows[1].add_card is add_card_fs:
+        if pair[0] % 4 == hand.rows[1].flush and pair[1] % 4 == hand.rows[1].flush:
+            s = is_straight(combo[1])
+            if s == 12: return 50 if hand.rows[2].combo == (8, [12]) else penalty
+            if s > 0: return 30 if (8, [s]) <= hand.rows[2].combo else penalty
+            return 8 if (5, combo[1]) <= hand.rows[2].combo else penalty
+        if combo[0] == 0:
+            s = is_straight(combo[1])
+            if s: return 4 if (4, [s]) <= hand.rows[2].combo else penalty
+        return 0 if combo >= hand.rows[0].combo and combo <= hand.rows[2].combo else penalty       
+def final_00(pair):
+    rank0, rank1 = pair[0] // 4, pair[1] // 4
+    combo = c1_3(hand.rows[0].combo, [rank0, rank1])
+    if combo <= hand.rows[1].combo:
+        if combo < (1, [4]): return 0
+        if combo < (1, [10]): return combo[1][0] - 3
+        if combo[0] == 1: return combo[1][0] - 3 + premium
+        return combo[1][0] + 10 + premium
+    return penalty
+def final_12(card, i):
+    rank = card // 4
+    combo = c4_5(hand.rows[i].combo, rank)
+    if combo[0]: return combo
+    if hand.rows[i].add_card is add_card_f:
+        return (5, combo[1]) if hand.rows[i].flush == card % 4 else combo
+    if hand.rows[i].add_card is add_card_s:
+        if not combo[0]:
+            s = is_straight(combo[1])
+            return (4, [s]) if s else combo
+    if hand.rows[i].add_card is add_card_fs:
+        if card % 4 == hand.rows[i].flush:
+            s = is_straight(combo[1])
+            if s: return (8, [s])
+            else: return (5, combo[1])
+        if not combo[0]:
+            s = is_straight(combo[1])
+            return (4, [s]) if s else combo
+        return combo
 
-def s4p(player, f, h: Hand) -> tuple:
+def s4p(f, h: Hand) -> tuple:
     p = 0
+    max_points = penalty
     pairs = list(combinations(f.cards, 2))
     if h.rows[0].cells == 2:
-        max_combo = h.rows[0].combo
         for pair in pairs:
-            combo = final_pair3(h.rows[0], pair)
-            if combo > max_combo:
-                max_combo = combo
-                p = (pair[0], pair[1])
-        player.append_card(p[0], 0)
-        player.append_card(p[1], 0)
-        return
-    if h.rows[1].cells == 2:
-        max_combo = h.rows[1].combo
-        for pair in pairs:
-            combo = final_pair5(h.rows[1], pair)
-            if combo > max_combo:
-                max_combo = combo
-                p = ((1, pair[0]), (1, pair[1]))
-        print(p)
+            points = final_00(pair)
+            if points > max_points:
+                max_points = points
+                p = ((pair[0], 0), (pair[1], 0))
         return p
-    
+    if h.rows[1].cells == 2:
+        for pair in pairs:
+            points = final_11(pair)
+            if points > max_points:
+                max_points = points
+                p = ((pair[0], 1), (pair[1], 1))
+        return p
     if h.rows[2].cells == 2:
-        max_points = penalty
         for pair in pairs:
             points = final_22(pair)
             if points > max_points:
                 max_points = points
-                p = ((2, pair[0]), (2, pair[1]))
-        print(p)
+                p = ((pair[0], 2), (pair[1], 2))
         return p
 
     if h.rows[0].cells and h.rows[1].cells:
-        pass
+        for pair in pairs:
+            combo0 = c2_3(h.rows[0].combo, pair[0])
+            combo1 = final_12(pair[1], 1)
+            if combo0 <= combo1 and combo1 <= h.rows[2].combo:
+                points = get_points(combo0, 0) + get_points(combo1, 1)
+                if points > max_points:
+                    max_points = points
+                    p = ((pair[0], 0), (pair[1], 1))
+            combo0 = c2_3(h.rows[0].combo, pair[1])
+            combo1 = final_12(pair[0], 1)
+            if combo0 <= combo1 and combo1 <= h.rows[2].combo:
+                points = get_points(combo0, 0) + get_points(combo1, 1)
+                if points > max_points:
+                    max_points = points
+                    p = ((pair[1], 0), (pair[0], 1))
+        return p
     if h.rows[0].cells and h.rows[2].cells:
-        pass
+        for pair in pairs:
+            combo0 = c2_3(h.rows[0].combo, pair[0])
+            combo2 = final_12(pair[1], 2)
+            if combo0 <= h.rows[1].combo and combo2 >= h.rows[1].combo:
+                points = get_points(combo0, 0) + get_points(combo2, 2)
+                if points > max_points:
+                    max_points = points
+                    p = ((pair[0], 0), (pair[1], 2))
+            combo0 = c2_3(h.rows[0].combo, pair[1])
+            combo2 = final_12(pair[0], 2)
+            if combo0 <= h.rows[1].combo and combo2 >= h.rows[1].combo:
+                points = get_points(combo0, 0) + get_points(combo2, 2)
+                if points > max_points:
+                    max_points = points
+                    p = ((pair[1], 0), (pair[0], 2))
+        return p
     if h.rows[1].cells and h.rows[2].cells:
-        pass
-
+        for pair in pairs:
+            combo1 = final_12(pair[0], 1)
+            combo2 = final_12(pair[1], 2)
+            if combo1 >= h.rows[0].combo and combo2 >= combo1:
+                points = get_points(combo1, 1) + get_points(combo2, 2)
+                if points > max_points:
+                    max_points = points
+                    p = ((pair[0], 1), (pair[1], 2))
+            combo1 = final_12(pair[1], 1)
+            combo2 = final_12(pair[0], 2)
+            if combo1 >= h.rows[0].combo and combo2 >= combo1:
+                points = get_points(combo1, 1) + get_points(combo2, 2)
+                if points > max_points:
+                    max_points = points
+                    p = ((pair[1], 1), (pair[0], 2))
+        return p
 
 class Row:
     def __init__(self, row: int):
