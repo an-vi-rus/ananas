@@ -38,6 +38,7 @@ def rank5(row: Row, card):
                     if row.combo[1][0] == rank: return (3, row.combo[1])
                     if row.combo[1][1] == rank: return (2, row.combo[1]) if row.combo[1][0] > rank else (2, [rank, row.combo[1][0], row.combo[1][2]])
                     if row.combo[1][2] == rank: return (2, [row.combo[1][0], rank, row.combo[1][1]]) if row.combo[1][0] > rank else (2, [rank, row.combo[1][0], row.combo[1][1]])
+                    return (1, sorted(row.combo[1] + [rank], reverse=True))
                 case 2:
                     if row.combo[1][0] == rank: return (6, row.combo[1])
                     if row.combo[1][1] == rank: return (6, [row.combo[1][1], row.combo[1][0]])
@@ -52,6 +53,7 @@ def rank5(row: Row, card):
                     if row.combo[1][0] == rank: return (7, row.combo[1])
                     if row.combo[1][1] == rank: return (6, row.combo[1])
                     return row.combo
+                case 7: return row.combo
         case 1:
             match row.combo[0]:
                 case 1:
@@ -64,7 +66,7 @@ def rank5(row: Row, card):
                         r.remove(rank)
                         return (1, [rank] + r)
                     return (0, sorted(row.combo[1] + [rank], reverse=True))
-                case 3: return (7, row.combo[1]) if row.combo[1][0] == rank else (3, row.combo[1] + [rank])
+                case 3: return (7, row.combo[1]) if row.combo[1][0] == rank else (3, row.combo[1])
         case 2:
             if row.combo[0]: return (3, [rank]) if rank == row.combo[1][0] else (1, row.combo[1] + [rank])
             if rank == row.combo[1][0]: return (1, row.combo[1])
