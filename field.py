@@ -48,11 +48,14 @@ def key_pressed(event):
         case 'd': deck = fantasy.deck
         case 'D': fantasy.deck = deck
         case 'c':
+            p = 0
             match hand.rows[0].cells + hand.rows[1].cells + hand.rows[2].cells:
-                case 2: 
-                    p = my_hand.s4p(fantasy, hand)
-                    if p:
-                        for pair in p: players[2].append_card(pair[0], pair[1])
+                case 2: p = my_hand.s4p(fantasy.cards, hand)
+                case 4: p = my_hand.s3p(fantasy.cards, hand)
+            if p:
+                for pair in p:
+                    players[2].append_card(pair[0], pair[1])
+                    fantasy.cards.remove(pair[0])
         case 'n': fantasy.Next()
         case p:
             print('pause')
@@ -183,6 +186,7 @@ class Fantasy:
     def drop_cards(self):
         while self.cards:
             n = self.cards.pop()
+            if n in hand.cards: hand.cards.remove(n)
             cards[n].state = 'dropped'
             self.dropped.append(n)
             canvas.coords(cards[n].id, (self.point[0]+w*((len(self.dropped)+12)),self.point[1]+h*0.5))
