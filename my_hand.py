@@ -276,37 +276,25 @@ def add_card_f(row: Row, card: int):
     rank = card // 4
     suit = card % 4
     cards = row.combo[1]
-    match row.cells:
-        case 0:
-            if suit == row.flush:
-                row.cells -= 1
-                if rank > cards[0]: cards = (rank, cards[0], cards[1], cards[2], cards[3])
-                elif rank > cards[1]: cards = (cards[0], rank, cards[1], cards[2], cards[3])
-                elif rank > cards[2]: cards = (cards[0], cards[1], rank, cards[2], cards[3])
-                elif rank > cards[3]: cards = (cards[0], cards[1], cards[2], rank, cards[3])
-                else: cards = (cards[0], cards[1], cards[2], cards[3], rank)
-                row.combo = (5, cards)
-                row.max_combo = row.combo
-                row.points = 4 if row.row == 2 else 8
-                return
-            add_card5(row, card)
+    if not row.cells:
+        if suit == row.flush:
+            if rank > cards[0]: cards = (rank, cards[0], cards[1], cards[2], cards[3])
+            elif rank > cards[1]: cards = (cards[0], rank, cards[1], cards[2], cards[3])
+            elif rank > cards[2]: cards = (cards[0], cards[1], rank, cards[2], cards[3])
+            elif rank > cards[3]: cards = (cards[0], cards[1], cards[2], rank, cards[3])
+            else: cards = (cards[0], cards[1], cards[2], cards[3], rank)
+            row.combo = (5, cards)
+            row.max_combo = row.combo
+            row.points = 4 if row.row == 2 else 8
             return
-        case 1:
-            if suit != row.flush:
-                row.add_card = add_card5
-                add_card5(row, card)
-                return
-            add_card5(row, card)
-            row.max_combo = (5, (12, 12))
-            return
-        case 2:
-            if suit != row.flush:
-                row.add_card = add_card5
-                add_card5(row, card)
-                return
-            add_card5(row, card)
-            row.max_combo = (5, (12, 12))
-            return
+        add_card5(row, card)
+        return
+    if suit != row.flush:
+        row.add_card = add_card5
+        add_card5(row, card)
+        return
+    add_card5(row, card)
+    row.max_combo = (5, (12, 12))
     return
 
 def add_card_s(row: Row, card: int):
@@ -359,7 +347,7 @@ def add_card_fs(row: Row, card):
             row.max_combo =(7, (row.combo[1][0],))
         return
 
-    f = card % 4 == row.flush
+    f = suit == row.flush
     add_card5(row, card)
     cards = row.combo[1]
     if row.combo[0]:
@@ -397,6 +385,7 @@ def add_card_fs(row: Row, card):
         row.max_combo = (5, (12, 12))
         return
     row.max_combo = (8, (s,))
+    return
 
 def final_pair3(row: Row, pair: list):
     rank0, rank1 = pair[0] // 4, pair[1] // 4
@@ -726,6 +715,36 @@ def s4(f, h: Hand):
                 if points > max_points:
                     max_points = points
         return max_points + h.rows[0].points
+def s00(h: Hand, d: list):
+    rank = h.rows[0].combo[1][0]
+    r = (d[0] // 4, d[1] // 4, d[2] // 4)
+    pairs = ((r[0], r[1]), (r[0], r[2]), (r[1], r[2]))
+    max_points = penalty
+    for pair in pairs:
+        if pair[0] == rank:
+            if pair[1] == rank:
+                combo = (3, (rank,))
+                points = rank + 10 + penalty
+            else:
+                combo = (1, (rank, pair[1]))
+                points = HIGH_ROW_PAIR[rank]
+        elif pair[1] == rank:
+            combo = (1, (rank, pair[0]))
+            points = HIGH_ROW_PAIR[rank]
+        elif pair[0] == pair[1]:
+            combo = (1, (pair[0], rank))
+            points = HIGH_ROW_PAIR[pair[0]]
+        else:
+            points = 0
+            if rank > pair[0] and rank > pair[1]:
+                combo = (0, (rank, pair[0], pair[1])) if pair[0] > pair[1] else (0, (rank, pair[1], pair[0]))
+            elif pair[0] > rank and pair[0] > pair[1]:
+                combo = (0, (pair[0], rank, pair[1])) if rank > pair[1] else (0, (pair[0], pair[1], rank))
+            else: combo = (0, (pair[1], rank, pair[0])) if rank > pair[0] else (0, (pair[1], pair[0], rank))
+        if combo <= h.rows[1].combo and points > max_points: max_points = points
+    return h.rows[1].points + h.rows[2].points + max_points if max_points > penalty else penalty
+
+        
 
 def s3p(f, h_: Hand) -> tuple:
     start = dt.now()
