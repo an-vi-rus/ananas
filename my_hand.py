@@ -10,6 +10,34 @@ MASK = list([2 << i for i in range(13)])
 MASK[12] |= 1
 MASK5 = list([31 << i for i in range(10)])
 
+def lut3_6():
+    global C_INDEX, C_VALUES, D_INDEX, D_VALUES
+    C_INDEX = {}
+    C_VALUES = []
+    D_INDEX = {}
+    D_VALUES = []
+
+    for idx, c in enumerate(combinations(range(12, -1, -1), 3)):
+        C_INDEX[c] = idx
+        C_VALUES.append(c)
+
+    idx = 0
+    for d0 in range(12, -1, -1):
+        for d1 in range(d0, -1, -1):
+            for d2 in range(d1, -1, -1):
+                t = (d0, d1, d2)
+                D_INDEX[t] = idx
+                D_VALUES.append(t)
+                idx += 1
+
+    LUT = []
+    for c in C_VALUES:
+        row = []
+        for d in D_VALUES:
+            row.append(c3_6(c, d))
+        LUT.append(row)
+    return LUT  
+
 def is_straight(combo: list):
     if combo[0] - combo[-1] <= 4: return min(combo[-1] + 4, 12)
     if combo[0] == 12 and combo[1] <= 3: return 3
@@ -121,7 +149,7 @@ def add_card3(row: Row, card):
             row.combo = (0, (cards[0], rank)) if cards[0] > rank else (0, (rank, cards[0]))
             return
         case 2: row.combo = (0, (rank,))
-def add_card5(row: Row, card: int):
+def add_card_classic(row: Row, card: int):
     rank = card // 4
     kind, cards = row.combo
     match row.cells:
@@ -292,81 +320,52 @@ def add_card5(row: Row, card: int):
             return
 
 def add_card_f(row: Row, card: int):
-    suit = card % 4
     match row.cells:
         case 0:
             combo = c4_5(row.combo, card // 4)
             if combo[0]:
                 row.combo = combo
-                row.max_combo = combo
-                row.points = 0
+                row.max_combo = row.combo
                 return
-            if row.flush == suit:
+            if row.flush == card % 4:
                 row.combo = (5, combo[1])
                 row.max_combo = row.combo
                 row.points = 4 if row.row == 2 else 8
                 return
             row.combo = combo
-            row.max_combo = combo
-            row.points = 0
+            row.max_combo = row.combo
             return
         case 1:
             combo = c3_4(row.combo, card // 4)
             row.combo = combo
             if combo[0]:
-                row.add_card = add_card5
+                row.add_card = add_card_classic
                 row.max_combo = (3, (combo[1][0],))
                 return
-            if row.flush == suit:
-                row.max_combo = (5, (12, 12))
-                return
-            row.add_card = add_card5
-            row.max_combo = (1, combo[1])
+            if row.flush != card % 4:
+            #if row.flush == card % 4:
+            #    row.max_combo = (5, (12, 12))
+            #    return
+                row.add_card = add_card_classic
+                row.max_combo = (1, combo[1])
             return
         case 2:
             combo = c2_3(row.combo, card // 4)
             row.combo = combo
             if combo[0]:
-                row.add_card = add_card5
+                row.add_card = add_card_classic
                 row.max_combo = (7, (combo[1][0],))
                 return
-            if row.flush == suit:
-                row.max_combo = (5, (12, 12))
-                return
-            row.add_card = add_card5
-            row.max_combo = (3, (combo[1][0],))
-
-
-    cards = row.combo[1]
-    if not row.cells:
-        if suit == row.flush:
-            if rank > cards[0]: cards = (rank, cards[0], cards[1], cards[2], cards[3])
-            elif rank > cards[1]: cards = (cards[0], rank, cards[1], cards[2], cards[3])
-            elif rank > cards[2]: cards = (cards[0], cards[1], rank, cards[2], cards[3])
-            elif rank > cards[3]: cards = (cards[0], cards[1], cards[2], rank, cards[3])
-            else: cards = (cards[0], cards[1], cards[2], cards[3], rank)
-            row.combo = (5, cards)
-            row.max_combo = row.combo
-            row.points = 4 if row.row == 2 else 8
-            return
-        add_card5(row, card)
-        return
-    if suit != row.flush:
-        row.add_card = add_card5
-        add_card5(row, card)
-        return
-    add_card5(row, card)
-    row.max_combo = (5, (12, 12))
-    return
-
+            if row.flush != card % 4:
+                row.add_card = add_card_classic
+                row.max_combo = (3, (combo[1][0],))
 def add_card_s(row: Row, card: int):
     match row.cells:
         case 0:
             combo = c4_5(row.combo, card // 4)
             if combo[0]:
                 row.combo = combo
-                row.max_combo = combo
-                row.points = 0
+                row.max_combo = row.combo
                 return
             if combo[1][0] - combo[1][-1] ==4:
                 row.combo = (4, (combo[1][0],))
@@ -380,13 +379,12 @@ def add_card_s(row: Row, card: int):
                 return
             row.combo = combo
             row.max_combo = row.combo
-            row.points = 0
             return
         case 1:
             combo = c3_4(row.combo, card // 4)
             row.combo = combo
             if combo[0]:
-                row.add_card = add_card5
+                row.add_card = add_card_classic
                 row.max_combo = (3, (combo[1][0],))
                 return
             if combo[1][0] - combo[1][-1] <=4:
@@ -395,14 +393,14 @@ def add_card_s(row: Row, card: int):
             if combo[1][0] == 12 and combo[1][1] <= 3:
                 row.max_combo = (4, (3,))
                 return
-            row.add_card = add_card5
+            row.add_card = add_card_classic
             row.max_combo = (1, combo[1])
             return
         case 2:
             combo = c2_3(row.combo, card // 4)
             row.combo = combo
             if combo[0]:
-                row.add_card = add_card5
+                row.add_card = add_card_classic
                 row.max_combo = (7, (combo[1][0],))
                 return
             if combo[1][0] - combo[1][-1] <=4:
@@ -411,77 +409,142 @@ def add_card_s(row: Row, card: int):
             if combo[1][0] == 12 and combo[1][1] <= 3:
                 row.max_combo = (4, (3,))
                 return
-            row.add_card = add_card5
+            row.add_card = add_card_classic
             row.max_combo = (3, (combo[1][0],))
 
 def add_card_fs(row: Row, card):
-    rank, suit = card // 4, card % 4
-    if row.cells == 4:
-        row.flush = suit
-        row.combo = (0, (rank,))
-        row.max_combo = (8, (12,))
-        return
-    if row.cells == 3:
-        if rank == row.combo[1][0]:
-            row.combo = (1, (rank,))
-            row.max_combo = (7, (rank,))
-            row.add_card = add_card5
-            row.flush = -1
-            return
-        row.combo = (0, (rank, row.combo[1][0])) if rank > row.combo[1][0] else (0, (row.combo[1][0], rank))
-        cards = row.combo[1]
-        if cards[0] - cards[-1] <= 4: s = min(cards[-1] + 4, 12)
-        elif cards[0] == 12 and cards[1] <= 3: s = 3
-        else: s = 0
-        f = suit == row.flush
-        if not f:
-            row.add_card = add_card_s if s else add_card5
-            row.max_combo =(7, (row.combo[1][0],))
-            return
-        if not s:
-            row.add_card = add_card_f
-            row.max_combo =(7, (row.combo[1][0],))
-        return
-
-    f = suit == row.flush
-    add_card5(row, card)
-    cards = row.combo[1]
-    if row.combo[0]:
-        row.add_card = add_card5
-        return
-    if cards[0] - cards[-1] <= 4: s = min(cards[-1] + 4, 12)
-    elif cards[0] == 12 and cards[1] <= 3: s = 3
-    else: s = 0
-    if not row.cells:
-        if f:
-            if s:
-                row.combo = (8, (s,))
+    match row.cells:
+        case 0:
+            combo = c4_5(row.combo, card // 4)
+            if combo[0]:
+                row.combo = combo
                 row.max_combo = row.combo
-                if s < 12: row.points = 15 if row.row ==2 else 30
-                else: row.points = 25 if row.row == 2 else 50
                 return
-            row.combo = (5, cards)
+            if combo[1][0] - combo[1][-1] == 4:
+                if row.flush == card % 4:
+                    row.combo = (8, (combo[1][0],))
+                    row.max_combo = row.combo
+                    if row.combo[1][0] < 12:
+                        row.points = 15 if row.row == 2 else 30
+                        return
+                    row.points = 25 if row.row == 2 else 50
+                    return
+                row.combo = (4, (combo[1][0],))
+                row.max_combo = row.combo
+                row.points = 2 if row.row == 2 else 4
+                return
+            if combo[1][0] == 12 and combo[1][1] == 3:
+                if row.flush == card % 4:
+                    row.combo = (8, (3,))
+                    row.max_combo = row.combo
+                    row.points = 15 if row.row == 2 else 30
+                    return
+                row.combo = (4, (3,))
+                row.max_combo = row.combo
+                row.points = 2 if row.row == 2 else 4
+                return
+            if row.flush == card % 4:
+                row.combo = (5, combo[1])
+                row.max_combo = row.combo
+                row.points = 4 if row.row == 2 else 8
+                return
+            row.combo = combo
             row.max_combo = row.combo
-            row.points = 4 if row.row == 2 else 8
             return
-        if s:
-            row.combo = (4, (s,))
-            row.max_combo = row.combo
-            row.points = 2 if row.row == 2 else 4
+        case 1:
+            combo = c3_4(row.combo, card // 4)
+            row.combo = combo
+            if combo[0]:
+                row.add_card = add_card_classic
+                row.max_combo = (3, (combo[1][0],))
+                return
+            if combo[1][0] - combo[1][-1] <= 4:
+                if row.flush == card % 4:
+                    row.max_combo = (8, (min(12, combo[1][-1] + 4),))
+                    return
+                row.max_combo = (4, (min(12, combo[1][-1] + 4),))
+                row.add_card = add_card_s
+                return
+            if combo[1][0] == 12 and combo[1][1] <=3:
+                if row.flush == card % 4:
+                    row.max_combo = (8, (3,))
+                    return
+                row.max_combo = (4, (3,))
+                row.add_card = add_card_s
+                return
+            if row.flush == card % 4:
+                row.max_combo = (5, (12, 12))
+                row.add_card = add_card_f
+                return
+            row.max_combo = (1, combo[1])
+            row.add_card = add_card_classic
             return
-    if not f:
-        if not s:
-            row.add_card = add_card5
+        case 2:
+            combo = c2_3(row.combo, card // 4)
+            row.combo = combo
+            if combo[0]:
+                row.add_card = add_card_classic
+                row.max_combo = (7, (combo[1][0],))
+                return
+            if combo[1][0] - combo[1][-1] <= 4:
+                if row.flush == card % 4:
+                    row.max_combo = (8, (min(12, combo[1][-1] + 4),))
+                    return
+                row.max_combo = (4, (min(12, combo[1][-1] + 4),))
+                row.add_card = add_card_s
+                return
+            if combo[1][0] == 12 and combo[1][1] <=3:
+                if row.flush == card % 4:
+                    row.max_combo = (8, (3,))
+                    return
+                row.max_combo = (4, (3,))
+                row.add_card = add_card_s
+                return
+            if row.flush == card % 4:
+                row.max_combo = (5, (12, 12))
+                row.add_card = add_card_f
+                return
+            row.max_combo = (3, (combo[1][0],))
+            row.add_card = add_card_classic
             return
-        row.add_card = add_card_s
-        row.max_combo = (4, (s,))
-        return
-    if not s:
-        row.add_card = add_card_f
-        row.max_combo = (5, (12, 12))
-        return
-    row.max_combo = (8, (s,))
-    return
+        case 3:
+            rank = card // 4
+            if rank == row.combo[1][0]:
+                row.combo = (1, row.combo[1])
+                row.max_combo = (7, row.combo[1])
+                row.add_card = add_card_classic
+                return
+            combo = (0, (row.combo[1][0], rank)) if row.combo[1][0] > rank else (0, (rank, row.combo[1][0]))
+            row.combo = combo
+            if combo[1][0] - combo[1][-1] <= 4:
+                if row.flush == card % 4:
+                    row.max_combo = (8, (min(12, combo[1][-1] + 4),))
+                    return
+                row.max_combo = (7, (combo[1][0],))
+                row.add_card = add_card_s
+                return
+            if combo[1][0] == 12 and combo[1][1] <=3:
+                if row.flush == card % 4:
+                    row.max_combo = (8, (3,))
+                    return
+                row.max_combo = (7, (combo[1][0],))
+                row.add_card = add_card_s
+                return
+            if row.flush == card % 4:
+                row.max_combo = (7, (combo[1][0],))
+                row.add_card = add_card_f
+                return
+            row.max_combo = (7, (combo[1][0],))
+            row.add_card = add_card_classic
+            return
+        case 4:
+            row.flush = card % 4
+            row.combo = (0, (card // 4,))
+            row.max_combo = (8, (min(12, row.combo[1][0] + 4)))
+            return
+
+            
+
 
 def final_pair3(row: Row, pair: list):
     rank0, rank1 = pair[0] // 4, pair[1] // 4
@@ -587,10 +650,65 @@ def c4_5(combo: tuple, rank: int) -> tuple:
             if rank == combo[1][0]: return (7, combo[1])
             if rank == combo[1][1]: return (6, combo[1])
             return (3, (combo[1][0],))
+def c3_6(c: tuple, d: tuple) -> tuple:
+    match (d[0] == d[1]) + (d[1] == d[2]):
+        case 0:
+            if d[0] == c[0]:
+                if d[1] == c[1] or d[2] == c[1]: return (2, (c[0], c[1], c[2]))
+                if d[1] == c[2] or d[2] == c[2]: return (2, (c[0], c[2], c[1]))
+                if d[1] > c[1]: return (1, (c[0], d[1], c[1], c[2]))
+                if d[1] > c[2]: return (1, (c[0], c[1], d[1], c[2]))
+                return (1, (c[0], c[1], c[2], d[1]))
+            if d[0] == c[1]:
+                if d[1] == c[2] or d[2] == c[2]: return (2, (c[1], c[2], c[0]))
+                return (1, (c[1], c[0], d[1], c[2])) if d[1] > c[2] else (1, (c[1], c[0], c[2], d[1]))
+            if d[0] == c[2]: return (1, (c[2], c[0], c[1], d[1]))
+            if d[1] == c[0]:
+                if d[2] == c[1]: return (2, (c[0], c[1], c[2]))
+                if d[2] == c[2]: return (2, (c[0], c[2], c[1]))
+                return (1, (c[0], d[0], c[1], c[2]))
+            if d[1] == c[1]:
+                if d[2] == c[2]: return (2, (c[1], c[2], c[0]))
+                return (1, (c[1], d[0], c[0], c[2])) if d[0] > c[0] else (1, (c[1], c[0], d[0], c[2]))
+            if d[1] == c[2]:
+                if d[0] > c[0]: return (1, (c[2], d[0], c[0], c[1]))
+                return (1, (c[2], c[0], d[0], c[1])) if d[0] > c[1] else (1, (c[2], c[0], c[1], d[0]))
+            if d[2] == c[0]: return (1, (c[0], d[0], c[1], c[2]))
+            if d[2] == c[1]: 
+                return (1, (c[1], d[0], c[0], c[2])) if d[0] > c[0] else (1, (c[1], c[0], d[0], c[2]))
+            if d[2] == c[2]:
+                if d[0] > c[0]: return (1, (c[2], d[0], c[0], c[1]))
+                return (1, (c[2], c[0], d[0], c[1])) if d[0] > c[1] else (1, (c[2], c[0], c[1], d[0]))
+            if d[0] > c[0]:
+                if d[1] > c[0]: return (0, (d[0], d[1], c[0], c[1], c[2]))
+                if d[1] > c[1]: return (0, (d[0], c[0], d[1], c[1], c[2]))
+                if d[1] > c[2]: return (0, (d[0], c[0], c[1], d[1], c[2]))
+                return (0, (d[0], c[0], c[1], c[2], d[1]))
+            if d[0] > c[1]:
+                if d[1] > c[1]: return (0, (c[0], d[0], d[1], c[1], c[2]))
+                return (0, (c[0], d[0], c[1], d[1], c[2])) if d[1] > c[2] else (0, (c[0], d[0], c[1], c[2], d[1]))
+            if d[0] > c[2]:
+                return (0, (c[0], c[1], d[0], d[1], c[2])) if d[1] > c[2] else (0, (c[0], c[1], d[0], c[2], d[1]))
+            return (0, (c[0], c[1], c[2], d[0], d[1])) 
+        case 1:
+            if d[1] == c[0] or d[1] == c[1] or d[1] == c[2]: return (3, (d[1],))
+            d0 = d[2] if d[2] != d[1] else d[0]
+            if d0 < d[1]: return (1, (d[1], c[0], c[1], c[2]))
+            if d0 == c[0]:
+                    if d[1] > c[1]: return (1, (c[0], d[1], c[1], c[2]))
+                    if d[1] > c[2]: return (1, (c[0], c[1], d[1], c[2]))
+                    return (1, (c[0], c[1], c[2], d[1]))
+            if d0 == c[1]: return (1, (c[1], c[0], d[1], c[2])) if d[1] > c[2] else (1, (c[1], c[0], c[2], d[1]))
+            if d0 == c[2]: return (1, (c[2], c[0], c[1], d[1]))
+            return (1, (d[1], c[0], c[1], c[2]))
+        case 2:
+            if d[1] == c[0] or d[1] == c[1] or d[1] == c[2]: return (3, (d[1],))
+            return (1, (d[1], c[0], c[1], c[2]))
+LUT3_6 = lut3_6()
 def final_22(pair: list):
     rank0, rank1 = pair[0] // 4, pair[1] // 4
     combo = c4_5(c3_4(hand.rows[2].combo, rank0), rank1)
-    if hand.rows[2].add_card is add_card5:
+    if hand.rows[2].add_card is add_card_classic:
         if combo >= hand.rows[1].combo:
             if combo[0] == 6: return 6
             elif combo[0] == 7: return 10
@@ -845,6 +963,64 @@ def s00(h: Hand, d: list):
             else: combo = (0, (pair[1], rank, pair[0])) if rank > pair[0] else (0, (pair[1], pair[0], rank))
         if combo <= h.rows[1].combo and points > max_points: max_points = points
     return h.rows[1].points + h.rows[2].points + max_points if max_points > penalty else penalty
+def s22_(h: Hand, d: list):
+    combo1, row2 = h.rows[1].combo, h.rows[2]
+    r0, r1, r2 = d[0] // 4, d[1] // 4, d[2] // 4
+    c0, c1, c2 = row2.combo[1]
+    if row2.add_card is add_card_f:
+        if (d[0] & 3 == row2.flush) + (d[1] & 3 == row2.flush) + (d[2] & 3 == row2.flush) >= 2:
+            if combo1[0] < 5: return 4
+            c10, c11, c12, c13, c14 = combo1[1]
+            mask1 = (1 << c10) | (1 << c11) | (1 << c12) | (1 << c13) | (1 << c14)
+            mask2 = (1 << c0) | (1 << c1) | (1 << c2)
+            if d[0] & 3 == row2.flush:
+                if d[1] & 3 == row2.flush:
+                    mask2 = mask2 | (1 << r0) | (1 << r1)
+                    return 4 if mask2 >= mask1 else penalty
+                mask2 = mask2 | (1 << r0) | (1 << r2)
+                return 4 if mask2 >= mask1 else penalty
+            mask2 = mask2 | (1 << r1) | (1 << r2)
+            return 4 if mask2 >= mask1 else penalty
+        print(row2.combo, d, LUT3_6[C_INDEX[(c0, c1, c2)]][D_INDEX[(r0, r1, r2)]])
+    if row2.add_card is add_card_classic:
+        pass
+    if h.rows[2].add_card is add_card_s:
+        s = row2.max_combo[1][0]
+        mask = MASK[c0] | MASK[c1] | MASK[c2] | MASK[r0] | MASK[r1] | MASK[r2]
+        if MASK & MASK5[s-3] == MASK5[s-3]: return 2 if (4, (s,)) >= combo1 else penalty
+        if s > 3 and MASK & MASK5[s-4] == MASK5[s-4]: return 2 if (4, (s-1,)) >= combo1 else penalty
+        if s > 4 and MASK & MASK5[s-5] == MASK5[s-5]: return 2 if (4, (s-2,)) >= combo1 else penalty
+        return 0 if LUT3_6[C_INDEX[(c0, c1, c2)]][D_INDEX[(r0, r1, r2)]] >= combo1 else penalty 
+
+    if h.rows[2].add_card is add_card_fs:
+        f = (d[0] & 3 == row2.flush) + (d[1] & 3 == row2.flush) + (d[2] & 3 == row2.flush)
+        s = row2.max_combo[1][0]
+        if f < 2:
+            mask = MASK[c0] | MASK[c1] | MASK[c2] | MASK[r0] | MASK[r1] | MASK[r2]
+            if mask & MASK5[s-3] == MASK5[s-3]: return 2 if (4, (s,)) >= combo1 else penalty
+            if s > 3 and mask & MASK5[s-4] == MASK5[s-4]: return 2 if (4, (s-1,)) >= combo1 else penalty
+            if s > 4 and mask & MASK5[s-5] == MASK5[s-5]: return 2 if (4, (s-2,)) >= combo1 else penalty
+            return 0 if LUT3_6[C_INDEX[(c0, c1, c2)]][D_INDEX[(r0, r1, r2)]] >= combo1 else penalty
+        if f == 3:
+            mask2 = MASK[c0] | MASK[c1] | MASK[c2] | MASK[r0] | MASK[r1]
+            mask = mask2 | MASK[r2]
+        else:
+            if (d[0] & 3 == row2.flush) and (d[2] & 3 == row2.flush): r0, r1 = r0, r2
+            elif (d[1] & 3 == row2.flush) and (d[2] & 3 == row2.flush): r0, r1 = r1, r2
+            mask2 = MASK[c0] | MASK[c1] | MASK[c2] | MASK[r0] | MASK[r1]
+            mask = mask2
+
+        if mask & MASK5[s-3] == MASK5[s-3]:
+            if s == 12: return 25
+            return 15 if (8, (s,)) >= combo1 else penalty
+        if s > 3 and mask & MASK5[s-4] == MASK5[s-4]: return 15 if (8, (s-1,)) >= combo1 else penalty
+        if s > 4 and mask & MASK5[s-5] == MASK5[s-5]: return 15 if (8, (s-2,)) >= combo1 else penalty
+        if combo1[0] < 5: return 4
+        if combo1[0] > 5: return penalty
+        c10, c11, c12, c13, c14 = combo1[1]
+        mask1 = (1 << c10) | (1 << c11) | (1 << c12) | (1 << c13) | (1 << c14)
+        return 4 if mask2 >= mask1 else penalty
+    
 def s22(h: Hand, d: list):
     row2 = h.rows[2]
     combo1 = h.rows[1].combo
@@ -861,6 +1037,9 @@ def s22(h: Hand, d: list):
         )
     max_points = penalty
     if add_card is add_card_f:
+        if (d[0] & 3 == row2.flush) + (d[1] & 3 == row2.flush) + (d[2] & 3 == row2.flush) >= 2:
+
+            pass
         s0, s1, s2 = d0 % 4, d1 % 4, d2 % 4
         if flush == s0 == s1 or flush == s0 == s2 or flush == s1 == s2:
             print(f'cards2, r0, r1, r2 {cards2}, {r0}, {r1}, {r2}')

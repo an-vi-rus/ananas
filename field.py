@@ -56,11 +56,11 @@ def key_pressed(event):
                 for pair in p:
                     players[2].append_card(pair[0], pair[1])
                     fantasy.cards.remove(pair[0])
-        case 'C': print(my_hand.s22(hand, fantasy.cards))
+        case 'C': print(my_hand.s22_(hand, fantasy.cards))
         case 'n': fantasy.Next()
         case 'p':
             print('pause')
-        case s: print(my_hand.s22(hand, fantasy.cards))
+        #case s: print(my_hand.s22(hand, fantasy.cards))
 class Card:
     def __init__(self, n):
         self.n = n
