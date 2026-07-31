@@ -1020,7 +1020,98 @@ def s22_(h: Hand, d: list):
         c10, c11, c12, c13, c14 = combo1[1]
         mask1 = (1 << c10) | (1 << c11) | (1 << c12) | (1 << c13) | (1 << c14)
         return 4 if mask2 >= mask1 else penalty
-    
+
+def c3_5_(c: tuple, d: tuple) -> tuple:
+    if c[0] == c[1] == c[2]:
+        if d[0] == d[1] == d[2]:
+            return (6, (c[0], d[0]))
+        if d[0] == d[1]:
+            return (6, (c[0], d[0])) if d[2] != c[0] else (7, (c[0],))
+        if d[1] == d[2]:
+            return (6, (c[0], d[1])) if d[0] != c[0] else (7, (c[0],))
+        else: return (7, (c[0],)) if c[0] == d[0] or c[0] == d[1] or c[0] == d[2] else (3, (c[0],))
+    if c[0] == c[1]:
+        if d[0] == d[1] == d[2]:
+            if c[2] == d[0]: return (6, (c[2], c[0]))
+            return (2, (c[0], d[0], c[2])) if c[0] > d[0] else (2, (d[0], c[0], c[2])) 
+        if d[0] == d[1]:
+            if c[0] == d[0]: return (7, (c[0],))
+            if c[2] == d[0]: return (6, (c[2], c[0]))
+            if c[0] == d[2]: return (3, (c[0],))
+            return (2, (c[0], d[0], c[2])) if c[0] > d[0] else (2, (d[0], c[0], c[2]))
+        if d[1] == d[2]:
+            if c[0] == d[1]: return (7, (c[0],))
+            if c[2] == d[1]: return (6, (c[2], c[0]))
+            if c[0] == d[0]: return (3, (c[0],))
+            return (2, (c[0], d[1], c[2])) if c[0] > d[1] else (2, (d[1], c[0], c[2]))
+        else:
+            if (c[0] == d[0] or c[0] == d[1] or c[0] == d[2]) and (c[2] == d[0] or c[2] == d[1] or c[2] == d[2]): return (6, (c[0], c[2]))
+            if (c[0] == d[0] or c[0] == d[1] or c[0] == d[2]): return (3, (c[0],))
+            if (c[2] == d[0]): return (2, (c[0], c[2], d[1]))
+            if (c[2] == d[1]): return (2, (c[0], c[2], d[0]))
+            if (c[2] == d[2]): return (2, (c[0], c[2], d[0]))
+    if c[1] == c[2]:
+        if d[0] == d[1] == d[2]:
+            if c[0] == d[0]: return (6, (c[0], c[1]))
+            return (2, (c[1], d[0], c[0])) if c[1] > d[0] else (2, (d[0], c[1], c[0])) 
+        if d[0] == d[1]:
+            if c[1] == d[0]: return (7, (c[1],))
+            if c[0] == d[0]: return (6, (c[0], c[1]))
+            if c[1] == d[2]: return (3, (c[1],))
+            return (2, (c[1], d[0], c[0])) if c[1] > d[0] else (2, (d[0], c[1], c[0]))
+        if d[1] == d[2]:
+            if c[1] == d[1]: return (7, (c[1],))
+            if c[0] == d[1]: return (6, (c[0], c[1]))
+            if c[1] == d[0]: return (3, (c[1],))
+            return (2, (c[1], d[1], c[0])) if c[1] > d[1] else (2, (d[1], c[1], c[0]))
+        else:
+            if (c[1] == d[0] or c[1] == d[1] or c[1] == d[2]) and (c[0] == d[0] or c[0] == d[1] or c[0] == d[2]): return (6, (c[1], c[0]))
+            if (c[1] == d[0] or c[1] == d[1] or c[1] == d[2]): return (3, (c[1],))
+            if (c[0] == d[0]): return (2, (c[0], c[1], d[1]))
+            if (c[0] == d[1]): return (2, (c[0], c[1], d[0]))
+            if (c[0] == d[2]): return (2, (c[0], c[1], d[0]))
+    else:
+        if d[0] == d[1] == d[2]:
+            if c[0] == d[0] or c[1] == d[0] or c[2] == d[0]: return (3, (d[0],))
+            return (1, (d[0], c[0], c[1], c[2]))
+        if d[0] == d[1]:
+            if c[0] == d[0] or c[1] == d[0] or c[2] == d[0]: return (3, (d[0],))
+            return (1, (d[0], c[0], c[1], c[2]))
+        if d[1] == d[2]:
+            if c[0] == d[1] or c[1] == d[1] or c[2] == d[1]: return (3, (d[1],))
+            return (1, (d[1], c[0], c[1], c[2]))
+        else:
+            if (c[0] in d) and (c[1] in d): return (2, (c[0], c[1], c[2]))
+            if (c[0] in d) and (c[2] in d): return (2, (c[0], c[2], c[1]))
+            if (c[1] in d) and (c[2] in d): return (2, (c[1], c[2], c[0]))
+            if c[0] in d:
+                c_ = list(c)
+                c_.remove(c[0])
+                d_ = list(d)
+                d_.remove(c[0])
+                cd = [c[0]] + sorted([c_[0], c_[1], d_[0]], reverse=True)
+                return (1, tuple(cd))
+            if c[1] in d:
+                c_ = list(c)
+                c_.remove(c[1])
+                d_ = list(d)
+                d_.remove(c[1])
+                cd = [c[1]] + sorted([c_[0], c_[1], d_[0]], reverse=True)
+                return (1, tuple(cd))
+            if c[2] in d:
+                c_ = list(c)
+                c_.remove(c[2])
+                d_ = list(d)
+                d_.remove(c[2])
+                cd = [c[2]] + sorted([c_[0], c_[1], d_[0]], reverse=True)
+                return (1, tuple(cd))
+            cd = [c[0], c[1], c[2], d[0], d[1]]
+            cd = sorted(cd, reverse=True)
+            return (0, tuple(cd))
+            
+            
+
+
 def s22(h: Hand, d: list):
     row2 = h.rows[2]
     combo1 = h.rows[1].combo
