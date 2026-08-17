@@ -1155,19 +1155,14 @@ def s3_pair(hand: Hand, c: tuple):
 
 def s2p(hand: Hand, c: list):
     start = dt.now()
-
-    for item in c:
-        hand.cards.remove(item)
+    for item in c: hand.cards.remove(item)
 
     cc = list(combinations(hand.cards, 2))
     ccc = list(combinations(hand.cards, 3))
     max_points = PENALTY * len(ccc)
     p = 0
-    iterations = 0
-    calls = 0
-    for c0, c1 in combinations(c, 2):
 
-        # 00
+    for c0, c1 in combinations(c, 2):
         if hand.rows[0].cells >= 2:
             h = hand.clone()
             h.rows[0].cells -= 1
@@ -1185,11 +1180,7 @@ def s2p(hand: Hand, c: list):
                     p0 = CC2[(t0 << 6) + t1]
                     p1 = CC2[(t0 << 6) + t2]
                     p2 = CC2[(t1 << 6) + t2]
-
-                    if p0 > p1:
-                        max_p = p0 if p0 > p2 else p2
-                    else:
-                        max_p = p1 if p1 > p2 else p2
+                    max_p = max(p0, p1, p2)
 
                     points += max_p
                     iterations += 1
