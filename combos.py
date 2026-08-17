@@ -1,7 +1,92 @@
 from collections import Counter
 from itertools import combinations, product
-from aux import show_cards
 
+def merge3_2(c: tuple, d: tuple):
+    if d[0] <= c[2]: return (c[0], c[1], c[2], d[0], d[1])
+    if d[0] <= c[1]:
+        return (c[0], c[1], d[0], c[2], d[1]) if d[1] <= c[2] else (c[0], c[1], d[0], d[1], c[2])
+    if d[0] <= c[0]:
+        if d[1] <= c[2]: return (c[0], d[0], c[1], c[2], d[1])
+        if d[1] <= c[1]: return (c[0], d[0], c[1], d[1], c[2])
+        return (c[0], d[0], d[1], c[1], c[2])
+    if d[1] <= c[2]: return (d[0], c[0], c[1], c[2], d[1])
+    if d[1] <= c[1]: return (d[0], c[0], c[1], d[1], c[2])
+    if d[1] <= c[0]: return (d[0], c[0], d[1], c[1], c[2])
+    return (d[0], d[1], c[0], c[1], c[2])
+def new_merge_3_2(c: tuple, d: tuple):
+    return tuple(sorted(c + d, reverse= True))
+def new_combo_3_2(c: tuple, d: tuple):
+    m = merge3_2(c, d)
+    r = Counter(m).most_common()
+    if r[0][1] == 4: return (7, (r[0][0],))
+    if r[0][1] == 3: return (6, (r[0][0], r[1][0])) if r[1][1] == 2 else (3, (r[0][0],))
+    if r[0][1] == 2: return (2, (r[0][0], r[1][0], r[2][0])) if r[1][1] == 2 else (1, (r[0][0], r[1][0], r[2][0], r[3][0]))
+    if r[0][0] - r[4][0] == 4: return (4, (r[0][0],))
+    if r[0][0] == 12 and r[1][0] == 3: return (4, (3,))
+    return (0, m)
+
+
+def combo3_2(c: tuple, d: tuple) -> tuple:
+    if c[0] == c[1] == c[2]:
+        if d[0] == d[1]:
+            return (6, (c[0], d[0]))
+        if d[0] == c[0] or d[1] == c[0]:
+            return (7, (c[0],))
+        return (3, (c[0],))
+    if c[0] == c[1]:
+        if d[0] == d[1]:
+            if d[0] == c[0]:
+                return (7, (c[0],))
+            if d[0] == c[2]:
+                return (6, (c[2], c[0]))
+            return (2, (c[0], d[0], c[2])) if c[0] > d[0] else (2, (d[0], c[0], c[2]))
+        if c[0] == d[0]:
+            return (6, (c[0], c[2])) if c[2] == d[1] else (3, (c[0],))
+        if c[0] == d[1]:
+            return (3, (c[0],))
+        if c[2] == d[0]:
+            return (2, (c[0], c[2], d[1]))
+        if c[2] == d[1]:
+            return (2, (c[0], c[2], d[0]))
+        if d[0] > c[2]:
+            return (1, (c[0], d[0], d[1], c[2])) if d[1] > c[2] else (1, (c[0], d[0], c[2], d[1]))
+        return (1, (c[0], c[2], d[0], d[1]))
+    if c[1] == c[2]:
+        if d[0] == d[1]:
+            if d[0] == c[1]:
+                return (7, (c[1],))
+            if d[0] == c[0]:
+                return (6, (c[0], c[1]))
+            return (2, (c[1], d[0], c[0])) if c[1] > d[0] else (2, (d[0], c[1], c[0]))
+        if d[0] == c[1]:
+            return (3, (c[1],))
+        if d[1] == c[1]:
+            return (6, (c[1], c[0])) if d[0] == c[0] else (3, (c[1],))
+        if d[0] == c[0]:
+            return (2, (c[0], c[1], d[1]))
+        if d[1] == c[0]:
+            return (2, (c[0], c[1], d[0]))
+        if d[0] > c[0]:
+            return (1, (c[1], d[0], d[1], c[0])) if d[1] > c[0] else (1, (c[1], d[0], c[0], d[1]))
+        return (1, (c[1], c[0], d[0], d[1]))
+    if d[0] == d[1]:
+        if d[0] in c:
+            return (3, (d[0]))
+        return (1, (d[0], c[0], c[1], c[2]))
+    if c[0] == d[0] and c[1] == d[1]:
+        return (2, (c[0], c[1], c[2]))
+    if c[0] == d[0] and c[2] == d[1]:
+        return (2, (c[0], c[2], c[1]))
+    if c[1] == d[0] and c[2] == d[1]:
+        return (2, (c[1], c[2], c[0]))
+    I = set(c) & set(d)
+    S = set(c) ^ set(d)
+    if I:
+        return (1, tuple(sorted(S, reverse=True)))
+    m = merge3_2(c, d)
+    if m[0] - m[-1] == 4: return (4, (m[0],))
+    if m[0] == 12 and m[1] == 3: return (4, (3,))
+    return (0, m)
 def ranks_dict(free_cards) -> dict:
     r_s = {}
     for i in range(13): r_s[i] = []

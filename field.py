@@ -1,11 +1,12 @@
 import sys
 import tkinter as tk
 from tkinter import ttk, IntVar, Radiobutton, Button
-from PIL import Image, ImageTk
-import my_hand  
+from PIL import Image, ImageTk  
 import utils
+from solver import *
+from solverP import *
 
-hand = None
+
 def init_data():
     global w, h, canvas, root, rb_value, screen_width, screen_height, field, hand
     root = tk.Tk()
@@ -21,7 +22,7 @@ def init_data():
     h = int(screen_height / 12)
     w = int(h / 1.4)
     field = Field()
-    hand = my_hand.hand
+    hand = Hand()
     root.mainloop()
 def reset():
     for player in players: player.reset()
@@ -49,18 +50,32 @@ def key_pressed(event):
         case 'D': fantasy.deck = deck
         case 'c':
             p = 0
-            match hand.rows[0].cells + hand.rows[1].cells + hand.rows[2].cells:
-                case 2: p = my_hand.s4p(fantasy.cards, hand)
-                case 4: p = my_hand.s3p(fantasy.cards, hand)
+            cells = hand.rows[0].cells + hand.rows[1].cells + hand.rows[2].cells
+            if cells == 4:
+                p = s3p(hand, fantasy.cards)
+            if cells == 2:
+                p = s4p(hand, fantasy.cards)
             if p:
                 for pair in p:
                     players[2].append_card(pair[0], pair[1])
                     fantasy.cards.remove(pair[0])
-        case 'C': print(my_hand.s22_(hand, fantasy.cards))
+        case 'C':
+            cells = hand.rows[0].cells + hand.rows[1].cells + hand.rows[2].cells
+            if cells == 6:
+                p = s2p(hand, fantasy.cards)
+            if cells == 4:
+                p = s3p_2(hand, fantasy.cards)
+            if cells == 2:
+                p = s4p(hand, fantasy.cards)
+            if p:
+                for pair in p:
+                    players[2].append_card(pair[0], pair[1])
+                    fantasy.cards.remove(pair[0])
+
         case 'n': fantasy.Next()
         case 'p':
             print('pause')
-        #case s: print(my_hand.s22(hand, fantasy.cards))
+        case 's': print(my_hand.s22_(hand, fantasy.cards))
 class Card:
     def __init__(self, n):
         self.n = n
@@ -109,7 +124,7 @@ class Field:
         cards = []
         for i in range(52): cards.append(Card(i))
         players = [Player(0), Player(1), Player(2)]
-        fantasy = Fantasy(5, 2000)
+        fantasy = Fantasy(0, 2000)
 class Player:
     def __init__(self, n):
         self.n = n
@@ -145,8 +160,14 @@ class Player:
         cards[card].state = 'placed'
         if card in hand.cards: hand.cards.remove(card)
         if self.n == 2:
-            hand.rows[row].cells -=1 
-            hand.rows[row].add_card(hand.rows[row], card)
+            r = hand.rows[row]
+            r.cells -=1
+            if row:
+                add_card5(r, card)
+            else:
+                add_card3(r, card)
+                
+
     def remove_card(self, card, row):
         self.rows[row].remove(card)
         self.cells[row] += 1

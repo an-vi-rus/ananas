@@ -1,5 +1,6 @@
 from itertools import combinations
 from datetime import datetime as dt
+from lut import LUT3_5, C_IND
 
 penalty = -6
 premium = 6
@@ -966,7 +967,12 @@ def s00(h: Hand, d: list):
 def s22_(h: Hand, d: list):
     combo1, row2 = h.rows[1].combo, h.rows[2]
     r0, r1, r2 = d[0] // 4, d[1] // 4, d[2] // 4
-    c0, c1, c2 = row2.combo[1]
+    if row2.combo[0] == 0: c0, c1, c2 = row2.combo[1]
+    elif row2.combo[0] == 1:
+        p, k = row2.combo[1]
+        c0, c1, c2 = p, p, k if p > k else k, p, p
+    else: c0, c1, c2 = row2.combo[1][0], row2.combo[1][0], row2.combo[1][0]
+    
     if row2.add_card is add_card_f:
         if (d[0] & 3 == row2.flush) + (d[1] & 3 == row2.flush) + (d[2] & 3 == row2.flush) >= 2:
             if combo1[0] < 5: return 4
@@ -981,16 +987,21 @@ def s22_(h: Hand, d: list):
                 return 4 if mask2 >= mask1 else penalty
             mask2 = mask2 | (1 << r1) | (1 << r2)
             return 4 if mask2 >= mask1 else penalty
-        print(row2.combo, d, LUT3_6[C_INDEX[(c0, c1, c2)]][D_INDEX[(r0, r1, r2)]])
+        return 0 if LUT3_5[C_IND[(c0, c1, c2)]][C_IND[(r0, r1, r2)]] >= combo1 else penalty
     if row2.add_card is add_card_classic:
-        pass
+        combo2 = LUT3_5[C_IND[(c0, c1, c2)]][C_IND[(r0, r1, r2)]]
+        if combo2 < combo1: return penalty
+        if combo2[0] < 4: return 0
+        if combo2[0] == 6: return 6
+        if combo2[0] == 7: return 10
+
     if h.rows[2].add_card is add_card_s:
         s = row2.max_combo[1][0]
         mask = MASK[c0] | MASK[c1] | MASK[c2] | MASK[r0] | MASK[r1] | MASK[r2]
         if MASK & MASK5[s-3] == MASK5[s-3]: return 2 if (4, (s,)) >= combo1 else penalty
         if s > 3 and MASK & MASK5[s-4] == MASK5[s-4]: return 2 if (4, (s-1,)) >= combo1 else penalty
         if s > 4 and MASK & MASK5[s-5] == MASK5[s-5]: return 2 if (4, (s-2,)) >= combo1 else penalty
-        return 0 if LUT3_6[C_INDEX[(c0, c1, c2)]][D_INDEX[(r0, r1, r2)]] >= combo1 else penalty 
+        return 0 if LUT3_5[C_IND[(c0, c1, c2)]][C_IND[(r0, r1, r2)]] >= combo1 else penalty 
 
     if h.rows[2].add_card is add_card_fs:
         f = (d[0] & 3 == row2.flush) + (d[1] & 3 == row2.flush) + (d[2] & 3 == row2.flush)
@@ -1000,7 +1011,7 @@ def s22_(h: Hand, d: list):
             if mask & MASK5[s-3] == MASK5[s-3]: return 2 if (4, (s,)) >= combo1 else penalty
             if s > 3 and mask & MASK5[s-4] == MASK5[s-4]: return 2 if (4, (s-1,)) >= combo1 else penalty
             if s > 4 and mask & MASK5[s-5] == MASK5[s-5]: return 2 if (4, (s-2,)) >= combo1 else penalty
-            return 0 if LUT3_6[C_INDEX[(c0, c1, c2)]][D_INDEX[(r0, r1, r2)]] >= combo1 else penalty
+            return 0 if LUT3_5[C_IND[(c0, c1, c2)]][C_IND[(r0, r1, r2)]] >= combo1 else penalty
         if f == 3:
             mask2 = MASK[c0] | MASK[c1] | MASK[c2] | MASK[r0] | MASK[r1]
             mask = mask2 | MASK[r2]
@@ -1468,7 +1479,7 @@ class Row:
         self.reset()
     def reset(self):
         self.cells = 3 if self.row == 0 else 5
-        self.combo, self.max_combo = (-1, tuple()), (-1, tuple())
+        self.combo, self.max_combo = 0, 0
         self.flush = -1
         self.points = 0
         self.add_card = add_card_fs if self.row else add_card3
@@ -1477,8 +1488,8 @@ class Row:
 
         obj.row = self.row
         obj.cells = self.cells
-        obj.combo = (self.combo[0], self.combo[1].copy())
-        obj.max_combo = (self.max_combo[0], self.max_combo[1].copy())
+        obj.combo = self.combo
+        obj.max_combo = self.max_combo
         obj.flush = self.flush
         obj.points = self.points
         obj.add_card = self.add_card
