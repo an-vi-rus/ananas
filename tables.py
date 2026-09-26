@@ -120,4 +120,6 @@ T1_3 = t1_3()
 T1_1 = [[combo2((r, c)) for c in range(13)] for r in range(13)]
 T1_1F = [[combo2f((r, c)) for c in range(13)] for r in range(13)]
 
+T1 = [pack(0, r) for r in range(13)]
+
 

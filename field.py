@@ -1,12 +1,19 @@
 import sys
+import random
 import tkinter as tk
 from tkinter import ttk, IntVar, Radiobutton, Button
 from PIL import Image, ImageTk  
-import utils
 from solver import *
-from solverP import *
+import utils
+import s3
+import s2
+import s1
+from f_solver import solve, seed, test_solve
 
-
+# print([x for x in dir(s3) if not x.startswith('__')])
+opps = 1
+seed = 0
+random.seed(seed)
 def init_data():
     global w, h, canvas, root, rb_value, screen_width, screen_height, field, hand
     root = tk.Tk()
@@ -29,6 +36,7 @@ def reset():
     for card in cards: card.reset()
     fantasy.reset()
     hand.reset()
+    text_var.set("")
 def set_card_imgs():
     global card_imgs
     card_imgs = []
@@ -42,29 +50,45 @@ def set_card_imgs():
                 img = ImageTk.PhotoImage(f.resize((w - 2, h - 2), 2))
                 card_imgs.append(img)
 def key_pressed(event):
-    global deck
+    global deck, text_var
     match event.keysym:
         case 'f': rb_value.set(9)
         case 'Escape': reset()
         case 'd': deck = fantasy.deck
         case 'D': fantasy.deck = deck
-        case 'c':
+        case 'u': 
+            random.seed(0)
+            fantasy.deck = list(range(52))
+            random.shuffle(fantasy.deck)
+        case 'e':
+            fantasy.deck = utils.s0deck()
+            for pair in utils.p:
+                players[2].append_card(pair[0], pair[1])
+                fantasy.deck.remove(pair[0])
+        case 'i':
+            next_deck()
+        case 'C':
             p = 0
             cells = hand.rows[0].cells + hand.rows[1].cells + hand.rows[2].cells
+            if cells == 6:
+                p = s2.s2p(hand, fantasy.cards, 1)
             if cells == 4:
-                p = s3p(hand, fantasy.cards)
+                p = s3.s3p(hand, fantasy.cards)
             if cells == 2:
                 p = s4p(hand, fantasy.cards)
             if p:
                 for pair in p:
                     players[2].append_card(pair[0], pair[1])
                     fantasy.cards.remove(pair[0])
-        case 'C':
+        case 'c':
+            p = 0
             cells = hand.rows[0].cells + hand.rows[1].cells + hand.rows[2].cells
+            if cells == 8:
+                p = s1.s1p(hand, fantasy.cards, 0.05)
             if cells == 6:
-                p = s2p(hand, fantasy.cards)
+                p = s2.s2(hand, fantasy.cards, 0.5)
             if cells == 4:
-                p = s3p_2(hand, fantasy.cards)
+                p = s3.s3(hand, fantasy.cards)
             if cells == 2:
                 p = s4p(hand, fantasy.cards)
             if p:
@@ -72,10 +96,40 @@ def key_pressed(event):
                     players[2].append_card(pair[0], pair[1])
                     fantasy.cards.remove(pair[0])
 
+        case 't':
+            c = random.sample(hand.cards, 2)
+            text_var.set(s1.s1_n(hand, 40))
+
         case 'n': fantasy.Next()
         case 'p':
             print('pause')
-        case 's': print(my_hand.s22_(hand, fantasy.cards))
+        case 's':
+            if len(fantasy.cards) >= 14:
+                cards = fantasy.cards[:]
+                p = solve(fantasy.cards)
+                for row in p:
+                    for pair in row:
+                        players[2].append_card(pair[0], pair[1])
+                        fantasy.cards.remove(pair[0])
+                test_solve(cards)
+        case 'S':
+            deck = list(range(52))
+            sample = random.sample(deck, 15)
+            for card in sample: 
+                fantasy.append_card(card)
+def next_deck():
+    global seed
+    deck = list(range(52))
+    random.seed(seed)
+    random.shuffle(deck)
+    sample = deck[:5]
+    for item in sample: deck.remove(item)
+    sample.extend(deck)
+    fantasy.deck = sample[:]
+    seed += 1
+    deck_var.set(seed)
+    print(deck_var.get())
+
 class Card:
     def __init__(self, n):
         self.n = n
@@ -115,16 +169,22 @@ class Card:
         canvas.coords(self.id, (self.x, self.y))
 class Field:
     def __init__(self):
-        global canvas, players, cards, fantasy
+        global canvas, players, cards, fantasy, text_var, deck_var
+        text_var = tk.StringVar(value="")
+        deck_var = tk.IntVar(value=0)
         frame = ttk.Frame(root)
         frame.pack(fill='both', expand=True)
         canvas = tk.Canvas(frame, bg='lightgreen', bd=0)
         canvas.pack(fill='both', expand=True)
+        entry1 = tk.Entry(canvas, textvariable=text_var, width=6, font=("Arial", 11))
+        canvas.create_window(750, 350, window=entry1)
+        deck_entry = tk.Entry(canvas, textvariable=deck_var, width=6, font=("Arial", 11))
+        canvas.create_window(750, 370, window=deck_entry)
         set_card_imgs()
         cards = []
         for i in range(52): cards.append(Card(i))
         players = [Player(0), Player(1), Player(2)]
-        fantasy = Fantasy(0, 2000)
+        fantasy = Fantasy(5, 0)
 class Player:
     def __init__(self, n):
         self.n = n
@@ -161,11 +221,10 @@ class Player:
         if card in hand.cards: hand.cards.remove(card)
         if self.n == 2:
             r = hand.rows[row]
-            r.cells -=1
             if row:
-                add_card5(r, card)
+                add_card_5(r, card)
             else:
-                add_card3(r, card)
+                add_card_3(r, card)
                 
 
     def remove_card(self, card, row):
@@ -192,7 +251,7 @@ class Fantasy:
         self.dropped = []
         self.step = 0
         rb_value.set(9)
-        self.deck = utils.test_deck(self.starter, self.seed)
+        self.deck = utils.test_deck(5, seed)
     def append_card(self, card: int):
         canvas.coords(cards[card].id, (self.point[0]+w*(len(self.cards)+0.5),self.point[1]+h*0.5))
         self.cards.append(card)
@@ -224,7 +283,7 @@ class Fantasy:
                     fantasy.append_card(self.deck[i])
                 self.step += 1
             case 1:
-                for p in range(2):
+                for p in range(opps):
                     for c in range(5):
                         players[p].append_card(self.deck[p*5+5+c], 1)
                 for i in range(3):
@@ -232,7 +291,7 @@ class Fantasy:
                 self.step += 1
             case 2:
                 self.drop_cards()
-                for p in range(2):
+                for p in range(opps):
                     for c in range(2):
                         players[p].append_card(self.deck[p*2+c+18], 2)
                 for i in range(3):
@@ -240,7 +299,7 @@ class Fantasy:
                 self.step += 1
             case 3:
                 self.drop_cards()
-                for p in range(2):
+                for p in range(opps):
                     for c in range(2):
                         players[p].append_card(self.deck[p*2+c+25], 2)
                 for i in range(3):
@@ -248,7 +307,7 @@ class Fantasy:
                 self.step += 1
             case 4:
                 self.drop_cards()
-                for p in range(2):
+                for p in range(opps):
                     for c in range(2):
                         players[p].append_card(self.deck[p*2+c+32], 0)
                 for i in range(3):

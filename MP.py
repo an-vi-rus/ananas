@@ -1,4 +1,4 @@
 
-from field import *
+from field import init_data
 
 init_data()

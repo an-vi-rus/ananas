@@ -747,15 +747,14 @@ def s3p_2(hand: Hand, c: list):
     print(f'from doubles time {(dt.now() - start).total_seconds()}, EV={max_points / len(ccc)}')
     return p
 
-def s3(hand: Hand, c: list):
-    for item in c:
-        hand.cards.remove(item)
+def s3(hand_: Hand, c: list):
+    hand = hand_.clone()
+    for item in c: hand.cards.remove(item)
 
     cc = list(combinations(hand.cards, 2))
     ccc = list(combinations(hand.cards, 3))
     max_points = PENALTY * len(ccc)
     p = 0
-
     for c0, c1 in combinations(c, 2):
 
         # 00
@@ -1003,7 +1002,7 @@ def s3(hand: Hand, c: list):
 
                 if points > max_points:
                     max_points = points
-
+    #print(f's3 time {round((dt.now() - start).total_seconds(), 2)}, points {max_points}')
     return max_points / len(ccc)
 
 def s3_pair(hand: Hand, c: tuple):

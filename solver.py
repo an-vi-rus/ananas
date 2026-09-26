@@ -1,7 +1,7 @@
 from helpers import *
 from tables import *
 
-PENALTY, PREMIUM = -6, 6
+PENALTY, PREMIUM = -6, 9
 
 HIGH_ROW_PAIR = (0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7 + PREMIUM, 8 + PREMIUM, 9 + PREMIUM)
 HIGH_ROW_TRIPLE = tuple(i + 10 + PREMIUM for i in range(13))
@@ -80,6 +80,59 @@ class Hand:
         obj.cards = self.cards.copy()
         return obj
 
+def add_card_5(row: Row, card: int):
+    row.cells -= 1
+    if row.cells == 0:
+        if row.flush != -1:
+            if card & 3 == row.flush:
+                row.idx = T4_1F[row.idx >> 4][card >> 2]
+                row.max_idx = row.idx
+                row.points = MIDDLE_ROYALTY[row.idx >> 16] if row.row == 1 else LOW_ROYALTY[row.idx >> 16]
+                return
+            else:
+                row.idx = T4_1[row.idx >> 4][card >> 2]
+                row.max_idx = row.idx
+                row.points = MIDDLE_ROYALTY[row.idx >> 16] if row.row == 1 else LOW_ROYALTY[row.idx >> 16]
+                return
+        row.idx = T4_1[row.idx >> 4][card >> 2]
+        row.max_idx = row.idx
+        row.points = MIDDLE_ROYALTY[row.idx >> 16] if row.row == 1 else LOW_ROYALTY[row.idx >> 16]
+        return
+    if row.cells == 1:
+        if row.flush != -1:
+            if card & 3 == row.flush:
+                row.idx, row.max_idx = T3_1F[(row.idx >> 8)][card >> 2]
+                return
+            else:
+                row.flush = -1
+                row.idx, row.max_idx = T3_1[(row.idx >> 8)][card >> 2]
+                return
+        row.idx, row.max_idx = T3_1[(row.idx >> 8)][card >> 2]
+        return
+    if row.cells == 2:
+        if row.flush != -1:
+            if card & 3 == row.flush:
+                row.idx, row.max_idx = T2_1F[(row.idx >> 12)][card >> 2]
+                return
+            else:
+                row.flush = -1
+                row.idx, row.max_idx = T2_1[(row.idx >> 12)][card >> 2]
+                return
+        row.idx, row.max_idx = T2_1[(row.idx >> 12)][card >> 2]
+        return
+    if row.cells == 3:
+        if card & 3 == row.flush:
+            row.idx, row.max_idx = T1_1F[(row.idx >> 16) & 0xf][card >> 2]
+            return
+        else:
+            row.flush = -1
+            row.idx, row.max_idx = T1_1[(row.idx >> 16) & 0xf][card >> 2]
+            return
+    if row.cells == 4:
+        row.idx = T1[card >> 2]
+        row.flush = card & 3
+        row.max_idx = pack(8, min((card >> 2) + 4, 12))
+
 def add_card5(row: Row, card):
     rank = card >> 2
     if row.cells == 0:
@@ -135,6 +188,18 @@ def add_card5(row: Row, card):
         row.idx = pack(0, rank)
         row.max_idx = pack(8, min(12, rank + 4))
         row.flush = card & 3
+
+def add_card_3(row: Row, card: int):
+    row.cells -= 1
+    if row.cells == 0:
+        row.idx = T2_1[row.idx >> 12][card >> 2][0]
+        row.points = HIGH_ROYALTY[row.idx >> 8]
+        return
+    if row.cells == 1:
+        row.idx = T1_1[(row.idx >> 16) & 0xf][card >> 2][0]
+        return
+    row.idx = T1[card >> 2]
+
 def add_card3(row: Row, card):
     rank = card >> 2
     if row.cells == 0:
@@ -210,6 +275,7 @@ def s00p(h: Hand, c: list):
         if points > max_points:
             max_points = points
             p = ((c[0], 0), (c[1], 0))
+     
     return p
 
 def s22(h: Hand, c: list):
@@ -270,6 +336,7 @@ def s22p(h: Hand, c: list):
         if points > max_points:
             max_points = points
             p = ((c[0], 2), (c[1], 2))
+     
     return p
 
 def s11(h: Hand, c: list):
@@ -366,7 +433,7 @@ def s11p(h: Hand, c: list):
         if points > max_points:
             max_points = points
             p = ((c[0], 1), (c[1], 1))
-
+     
     return p
 
 def s01(h: Hand, c: list):
@@ -520,6 +587,7 @@ def s01p(h: Hand, c: list):
             if points > max_points:
                 max_points = points
                 p = ((c[2], 0), (c[1], 1))
+         
         return p
     flush = h.rows[1].flush 
     if (c[0] & 3) == flush:
@@ -570,6 +638,7 @@ def s01p(h: Hand, c: list):
         if points > max_points:
             max_points = points
             p = ((c[2], 0), (c[1], 1))
+     
     return p
     
 def s02(h: Hand, c: list):
@@ -723,6 +792,7 @@ def s02p(h: Hand, c: list):
             if points > max_points:
                 max_points = points
                 p = ((c[2], 0), (c[1], 2))
+         
         return p
     flush = h.rows[2].flush 
     if (c[0] & 3) == flush:
@@ -773,6 +843,7 @@ def s02p(h: Hand, c: list):
         if points > max_points:
             max_points = points
             p = ((c[2], 0), (c[1], 2))
+     
     return p
 
 def s12(h: Hand, c: list):
@@ -978,6 +1049,7 @@ def s12p(h: Hand, c: list):
         if points > max_points:
             max_points = points
             p = ((c[2], 1), (c[1], 2))
+     
     return p  
 
 def s4p(h: Hand, c: list):
